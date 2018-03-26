@@ -89,6 +89,8 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
             self.results = try! decoder.decode([Result].self, from: data)
         })
         self.spinner.startAnimating()
+        self.results = []
+        self.resultsView.reloadData()
         task.resume()
     }
 
