@@ -10,6 +10,7 @@ import UIKit
 
 struct Result: Decodable {
     let opponents: [String]
+    let confidence: Double
     let judgements: [String]
 }
 
@@ -42,7 +43,7 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     }
 
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        return "Game \(section+1)"
+        return String.init(format: "Game %d: %0.2f%% confident", section+1, results[section].confidence * 100)
     }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
