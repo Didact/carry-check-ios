@@ -44,7 +44,17 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         return "Game \(section+1)"
     }
-    
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let result = self.results[indexPath.section]
+        guard indexPath.item < result.opponents.count else {
+            return
+        }
+
+        self.searchField.text = result.opponents[indexPath.item]
+        self.onGoPressed(self.goButton)
+        self.resultsView.deselectRow(at: indexPath, animated: true)
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -65,7 +75,13 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
                     self.resultsView.reloadData()
                 }
             }
+            if let err = err {
+                print(err.localizedDescription)
+                self.results = []
+                return
+            }
             guard let data = data else {
+                self.results = []
                 return
             }
             let decoder = JSONDecoder.init()
