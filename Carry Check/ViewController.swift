@@ -10,8 +10,10 @@ import UIKit
 
 struct Result: Decodable {
     let opponents: [String]
-    let confidence: Double
-    let judgements: [String]
+    let numCategories: Int
+    let judgements: [String: [String]]
+    let time: Date
+    let won: Bool
 }
 
 class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
@@ -33,7 +35,7 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         let result = results[section]
-        return result.opponents.count + result.judgements.count
+        return result.opponents.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -42,9 +44,20 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         return cell
     }
 
+    let formatter = { () -> DateFormatter in
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        return String.init(format: "Game %d: %0.2f%% confident", section+1, results[section].confidence * 100)
+        return "\(formatter.string(from: results[section].time)): \((results[section].won) ? "Victory" : "Defeat")"
     }
+
+//    func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
+//        return String.init(format: "Confidence: %0.2f%%", results[section].confidence * 100)
+//    }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let result = self.results[indexPath.section]
@@ -68,7 +81,7 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     }
 
     @IBAction func onGoPressed(_ sender: UIButton) {
-        let url = URL.init(string: "http://127.0.0.1:3001/search/\(searchField.text!)")!
+        let url = URL.init(string: "http://127.0.0.1:3002/search/\(searchField.text!)")!
         let task = URLSession.shared.dataTask(with: url, completionHandler: { data, resp, err in
             defer {
                 DispatchQueue.main.async {
@@ -86,6 +99,8 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
                 return
             }
             let decoder = JSONDecoder.init()
+            decoder.dateDecodingStrategy = .iso8601
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
             self.results = try! decoder.decode([Result].self, from: data)
         })
         self.spinner.startAnimating()
@@ -97,19 +112,14 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
 }
 
 class ResultCell: UITableViewCell {
-    @IBOutlet var typeLabel: UILabel!
-    @IBOutlet var valueLabel: UILabel!
+    @IBOutlet var gamertagLabel: UILabel!
+    @IBOutlet var confidenceLabel: UILabel!
 
     func initialize(_ result: Result, _ position: IndexPath) {
-        switch position.item < result.opponents.count {
-        case true:
-            // opponent cell
-            self.typeLabel.text = "Opponent:"
-            self.valueLabel.text = result.opponents[position.item]
-        case false:
-            self.typeLabel.text = "Judgement:"
-            self.valueLabel.text = result.judgements[position.item - result.opponents.count]
-
-        }
+        let gamertag = result.opponents[position.item]
+        let confidence = Double((result.judgements[gamertag] ?? []).count) / Double(result.numCategories)
+        self.gamertagLabel.text = gamertag
+        self.confidenceLabel.text = String.init(format: "%0.2f%%", confidence * 100)
+        self.confidenceLabel.textColor = (confidence < 0.5) ? .green : .red
     }
 }
