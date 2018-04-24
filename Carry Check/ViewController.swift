@@ -82,31 +82,56 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
 
     @IBAction func onGoPressed(_ sender: UIButton) {
         let url = URL.init(string: "http://127.0.0.1:3002/search/\(searchField.text!)")!
-        let task = URLSession.shared.dataTask(with: url, completionHandler: { data, resp, err in
-            defer {
-                DispatchQueue.main.async {
-                    self.spinner.stopAnimating()
-                    self.resultsView.reloadData()
-                }
+
+        let decoder = JSONDecoder.init()
+        decoder.dateDecodingStrategy = .iso8601
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        var buffer = Data()
+
+        class Delegate: NSObject, URLSessionDataDelegate {
+            let completion: () -> Void
+            let received: (Data) -> Void
+            init(completion: @escaping () -> Void, received: @escaping (Data) -> Void) {
+                self.completion = completion
+                self.received = received
             }
-            if let err = err {
-                print(err.localizedDescription)
-                self.results = []
-                return
+            func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, willCacheResponse proposedResponse: CachedURLResponse, completionHandler: @escaping (CachedURLResponse?) -> Void) {
+                self.completion()
+                completionHandler(nil)
             }
-            guard let data = data else {
-                self.results = []
-                return
+            func urlSession(_ session: URLSession,
+                            dataTask: URLSessionDataTask,
+                            didReceive data: Data) {
+                self.received(data)
             }
-            let decoder = JSONDecoder.init()
-            decoder.dateDecodingStrategy = .iso8601
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            self.results = try! decoder.decode([Result].self, from: data)
-        })
+        }
+
+        let received = { (data: Data) -> Void in
+            buffer += data
+            let parts = buffer.split(separator: UInt8("`".utf8CString[0]), maxSplits: .max, omittingEmptySubsequences: false)
+            buffer = parts.last!
+            for part in parts.dropLast() {
+                let result = try! decoder.decode(Result.self, from: part)
+                self.results.append(result)
+            }
+            DispatchQueue.main.async {
+                self.resultsView.reloadData()
+            }
+        }
+
+        let delegate = Delegate(completion: {
+            DispatchQueue.main.async {
+                self.spinner.stopAnimating()
+            }
+        }, received: received)
+        let session = URLSession.init(configuration: .default, delegate: delegate, delegateQueue: nil)
+        let task = session.dataTask(with: url)
         self.spinner.startAnimating()
         self.results = []
         self.resultsView.reloadData()
         task.resume()
+
     }
 
 }
