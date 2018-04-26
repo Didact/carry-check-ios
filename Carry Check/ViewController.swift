@@ -81,7 +81,7 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     }
 
     @IBAction func onGoPressed(_ sender: UIButton) {
-        let url = URL.init(string: "http://127.0.0.1:3002/search/\(searchField.text!)")!
+        let url = URL.init(string: "http://24.251.154.201:10302/search/\(searchField.text!)/stream")!
 
         let decoder = JSONDecoder.init()
         decoder.dateDecodingStrategy = .iso8601
@@ -90,20 +90,24 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         var buffer = Data()
 
         class Delegate: NSObject, URLSessionDataDelegate {
-            let completion: () -> Void
+            let completion: (Error?) -> Void
             let received: (Data) -> Void
-            init(completion: @escaping () -> Void, received: @escaping (Data) -> Void) {
+            init(completion: @escaping (Error?) -> Void, received: @escaping (Data) -> Void) {
                 self.completion = completion
                 self.received = received
             }
             func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, willCacheResponse proposedResponse: CachedURLResponse, completionHandler: @escaping (CachedURLResponse?) -> Void) {
-                self.completion()
+                self.completion(nil)
                 completionHandler(nil)
             }
             func urlSession(_ session: URLSession,
                             dataTask: URLSessionDataTask,
                             didReceive data: Data) {
                 self.received(data)
+            }
+
+            func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+                self.completion(error)
             }
         }
 
@@ -120,7 +124,7 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
             }
         }
 
-        let delegate = Delegate(completion: {
+        let delegate = Delegate(completion: { _ in
             DispatchQueue.main.async {
                 self.spinner.stopAnimating()
             }
