@@ -130,6 +130,15 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
                     self.spinner.stopAnimating()
                 }
                 self.shouldKeepAnimating = false
+
+                if self.results.isEmpty {
+                    let alert = UIAlertController.init(title: "No Results Found", message: "We couldn't find any games for that gamertag. Maybe you mispelled it?", preferredStyle: .alert)
+                    let cancel = UIAlertAction.init(title: "Close", style: .default, handler: nil)
+                    alert.addAction(cancel)
+                    self.present(alert, animated: true, completion: {
+                        self.spinner.stopAnimating()
+                    })
+                }
             }
         }, received: received)
 
