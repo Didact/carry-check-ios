@@ -80,7 +80,10 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         // Dispose of any resources that can be recreated.
     }
 
+    var task: URLSessionTask?
+
     @IBAction func onGoPressed(_ sender: UIButton) {
+        task?.cancel()
         let url = URL.init(string: "http://24.251.154.201:10302/search/\(searchField.text!)/stream")!
 
         let decoder = JSONDecoder.init()
@@ -130,11 +133,11 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
             }
         }, received: received)
         let session = URLSession.init(configuration: .default, delegate: delegate, delegateQueue: nil)
-        let task = session.dataTask(with: url)
+        task = session.dataTask(with: url)
         self.spinner.startAnimating()
         self.results = []
         self.resultsView.reloadData()
-        task.resume()
+        task?.resume()
 
     }
 
