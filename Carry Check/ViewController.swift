@@ -81,6 +81,7 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     }
 
     var task: URLSessionTask?
+    var shouldKeepAnimating = false
 
     @IBAction func onGoPressed(_ sender: UIButton) {
         task?.cancel()
@@ -98,10 +99,6 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
             init(completion: @escaping (Error?) -> Void, received: @escaping (Data) -> Void) {
                 self.completion = completion
                 self.received = received
-            }
-            func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, willCacheResponse proposedResponse: CachedURLResponse, completionHandler: @escaping (CachedURLResponse?) -> Void) {
-                self.completion(nil)
-                completionHandler(nil)
             }
             func urlSession(_ session: URLSession,
                             dataTask: URLSessionDataTask,
@@ -129,12 +126,19 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
 
         let delegate = Delegate(completion: { _ in
             DispatchQueue.main.async {
-                self.spinner.stopAnimating()
+                if !self.shouldKeepAnimating {
+                    self.spinner.stopAnimating()
+                }
+                self.shouldKeepAnimating = false
             }
         }, received: received)
+
         let session = URLSession.init(configuration: .default, delegate: delegate, delegateQueue: nil)
         task = session.dataTask(with: url)
-        self.spinner.startAnimating()
+        DispatchQueue.main.async {
+            self.spinner.startAnimating()
+            self.shouldKeepAnimating = true
+        }
         self.results = []
         self.resultsView.reloadData()
         task?.resume()
